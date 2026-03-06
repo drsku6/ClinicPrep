@@ -1,32 +1,29 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, getMultiFactorResolver, TotpMultiFactorGenerator, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   termsAgreed: boolean;
   setTermsAgreed: (agreed: boolean) => void;
   signInWithGoogle: () => Promise<void>;
-  mfaResolver: any;
-  setMfaResolver: (resolver: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  loading: true,
   termsAgreed: false,
   setTermsAgreed: () => {},
   signInWithGoogle: () => Promise.resolve(),
-  mfaResolver: null,
-  setMfaResolver: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [termsAgreed, setTermsAgreedState] = useState<boolean>(false);
-  const [mfaResolver, setMfaResolver] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -34,24 +31,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
-      if (!user) {
-        setMfaResolver(null);
-      }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    getRedirectResult(auth)
-      .catch((error) => {
-        if (error.code === 'auth/multi-factor-auth-required') {
-          const resolver = getMultiFactorResolver(auth, error);
-          setMfaResolver(resolver);
-        } else {
-          console.error('Error during redirect sign-in:', error);
-        }
-      });
   }, []);
 
   useEffect(() => {
@@ -65,37 +47,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    await signInWithRedirect(auth, googleProvider);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error("Error signing in with Google: ", error);
+    }
   };
 
   useEffect(() => {
-    if (loading) return; // Wait for auth state to load
+    if (loading) return;
 
     const publicRoutes = ['/signin', '/signup', '/'];
 
-    // MFA enforcement
-    if (mfaResolver && pathname !== '/signin') {
+    if (!user && !publicRoutes.includes(pathname)) {
       router.push('/signin');
       return;
     }
 
-    // Terms of Use and Auth enforcement
-    if (!user && !publicRoutes.includes(pathname)) {
-        router.push('/signin');
-        return;
+    if (user && !termsAgreed && pathname !== '/') {
+      router.push('/');
+      return;
     }
-
-    if (user && !termsAgreed && !publicRoutes.includes(pathname)) {
-        router.push('/');
-        return;
-    }
-
-  }, [user, termsAgreed, mfaResolver, pathname, router, loading]);
-
+  }, [user, termsAgreed, pathname, router, loading]);
 
   return (
-    <AuthContext.Provider value={{ user, termsAgreed, setTermsAgreed, signInWithGoogle, mfaResolver, setMfaResolver }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, loading, termsAgreed, setTermsAgreed, signInWithGoogle }}>
+      {children}
     </AuthContext.Provider>
   );
 };
