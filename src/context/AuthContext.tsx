@@ -1,4 +1,3 @@
-
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -10,9 +9,9 @@ interface AuthContextType {
   user: User | null;
   termsAgreed: boolean;
   setTermsAgreed: (agreed: boolean) => void;
-  signInWithGoogle: () => Promise<any>; // Changed return type
-  mfaResolver: any; // Added for MFA
-  setMfaResolver: (resolver: any) => void; // Added for MFA
+  signInWithGoogle: () => Promise<any>;
+  mfaResolver: any;
+  setMfaResolver: (resolver: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,7 +26,8 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [termsAgreed, setTermsAgreedState] = useState<boolean>(false);
-  const [mfaResolver, setMfaResolver] = useState<any>(null); // Added for MFA
+  const [mfaResolver, setMfaResolver] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -35,8 +35,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (!user) {
-        setMfaResolver(null); // Clear resolver on sign out
+        setMfaResolver(null);
       }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -54,13 +55,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      router.push('/');
       return result;
     } catch (error: any) {
       if (error.code === 'auth/multi-factor-auth-required') {
         const resolver = getMultiFactorResolver(auth, error);
         setMfaResolver(resolver);
-        return resolver; // Return resolver to the UI
+        return resolver;
       } else {
         throw error;
       }
@@ -68,15 +68,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    if (!termsAgreed && pathname !== '/' && pathname !== '/signin') {
-      router.push('/');
+    if (loading) return; // Wait for auth state to load
+
+    const publicRoutes = ['/signin', '/signup', '/'];
+
+    // MFA enforcement
+    if (mfaResolver && pathname !== '/signin') {
+      router.push('/signin');
+      return;
     }
-  }, [termsAgreed, pathname, router]);
+
+    // Terms of Use and Auth enforcement
+    if (!user && !publicRoutes.includes(pathname)) {
+        router.push('/signin');
+        return;
+    }
+
+    if (user && !termsAgreed && !publicRoutes.includes(pathname)) {
+        router.push('/');
+        return;
+    }
+
+  }, [user, termsAgreed, mfaResolver, pathname, router, loading]);
 
 
   return (
     <AuthContext.Provider value={{ user, termsAgreed, setTermsAgreed, signInWithGoogle, mfaResolver, setMfaResolver }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
