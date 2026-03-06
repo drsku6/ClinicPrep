@@ -57,17 +57,16 @@ const SymptomCheckerPage = () => {
               {errors.age && <p className="text-red-500 text-sm mt-1">{errors.age.message}</p>}
             </div>
             <div>
-              <label className="block text-gray-400 mb-2">Gender</label>
+              <label className="block text-gray-400 mb-2">Sex</label>
               <select
-                {...register('gender', { required: 'Gender is required' })}
+                {...register('sex', { required: 'Sex is required' })}
                 className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500"
               >
                 <option value="">Select...</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
-                <option value="other">Other</option>
               </select>
-              {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender.message}</p>}
+              {errors.sex && <p className="text-red-500 text-sm mt-1">{errors.sex.message}</p>}
             </div>
           </div>
 
@@ -85,29 +84,16 @@ const SymptomCheckerPage = () => {
           </div>
 
           <div className="mt-6">
-            <span className="block text-gray-400 mb-2">History of Diabetes?</span>
+            <span className="block text-gray-400 mb-2">Family History of Colon Cancer?</span>
             <div className="flex gap-4">
               <label className="flex items-center">
-                <input type="radio" {...register('historyOfDiabetes', { required: 'This field is required' })} value="true" className="mr-2"/> Yes
+                <input type="radio" {...register('familyHistoryOfColonCancer', { required: 'This field is required' })} value="true" className="mr-2"/> Yes
               </label>
               <label className="flex items-center">
-                <input type="radio" {...register('historyOfDiabetes', { required: 'This field is required' })} value="false" className="mr-2"/> No
+                <input type="radio" {...register('familyHistoryOfColonCancer', { required: 'This field is required' })} value="false" className="mr-2"/> No
               </label>
             </div>
-            {errors.historyOfDiabetes && <p className="text-red-500 text-sm mt-1">{errors.historyOfDiabetes.message}</p>}
-          </div>
-
-          <div className="mt-6">
-            <span className="block text-gray-400 mb-2">Family History of Heart Disease?</span>
-            <div className="flex gap-4">
-              <label className="flex items-center">
-                <input type="radio" {...register('familyHistoryOfHeartDisease', { required: 'This field is required' })} value="true" className="mr-2"/> Yes
-              </label>
-              <label className="flex items-center">
-                <input type="radio" {...register('familyHistoryOfHeartDisease', { required: 'This field is required' })} value="false" className="mr-2"/> No
-              </label>
-            </div>
-            {errors.familyHistoryOfHeartDisease && <p className="text-red-500 text-sm mt-1">{errors.familyHistoryOfHeartDisease.message}</p>}
+            {errors.familyHistoryOfColonCancer && <p className="text-red-500 text-sm mt-1">{errors.familyHistoryOfColonCancer.message}</p>}
           </div>
 
           <div className="mt-6">
