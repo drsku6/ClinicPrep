@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState } from 'react';
@@ -27,12 +26,7 @@ const SignInPage = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithGoogle();
-      if (result && result.hints) { // Check if MFA is required
-        // The UI will now show the MFA input
-      } else {
-        router.push('/');
-      }
+      await signInWithGoogle();
     } catch (error: any) {
       setError(error.message);
     }

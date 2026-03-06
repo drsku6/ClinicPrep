@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, getMultiFactorResolver, TotpMultiFactorGenerator } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, getMultiFactorResolver, TotpMultiFactorGenerator, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   termsAgreed: boolean;
   setTermsAgreed: (agreed: boolean) => void;
-  signInWithGoogle: () => Promise<any>;
+  signInWithGoogle: () => Promise<void>;
   mfaResolver: any;
   setMfaResolver: (resolver: any) => void;
 }
@@ -43,6 +43,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    getRedirectResult(auth)
+      .catch((error) => {
+        if (error.code === 'auth/multi-factor-auth-required') {
+          const resolver = getMultiFactorResolver(auth, error);
+          setMfaResolver(resolver);
+        } else {
+          console.error('Error during redirect sign-in:', error);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
     const agreed = localStorage.getItem('termsAgreed') === 'true';
     setTermsAgreedState(agreed);
   }, []);
@@ -53,18 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      return result;
-    } catch (error: any) {
-      if (error.code === 'auth/multi-factor-auth-required') {
-        const resolver = getMultiFactorResolver(auth, error);
-        setMfaResolver(resolver);
-        return resolver;
-      } else {
-        throw error;
-      }
-    }
+    await signInWithRedirect(auth, googleProvider);
   };
 
   useEffect(() => {
