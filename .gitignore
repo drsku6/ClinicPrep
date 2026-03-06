@@ -12,6 +12,7 @@
 # next.js
 /.next/
 /out/
+next-env.d.ts
 
 # production
 /build
@@ -27,3 +28,6 @@ yarn-error.log*
 
 # local env files
 .env*.local
+
+# AI-generated files
+blueprint.md
