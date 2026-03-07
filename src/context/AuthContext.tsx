@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithRedirect, signOut as firebaseSignOut } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithRedirect, signOut as firebaseSignOut, getRedirectResult } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -37,6 +37,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('clinicprep_auth_change', Date.now().toString());
     });
     return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) {
+        // User successfully returned from Google
+        setUser(result.user);
+      }
+    }).catch((error) => {
+      console.error("Redirect Error:", error);
+    });
   }, []);
 
   useEffect(() => {
