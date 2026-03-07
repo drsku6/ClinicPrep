@@ -52,4 +52,5 @@ This is a health application that allows users to check their symptoms, find spe
 |-- postcss.config.js
 |-- tailwind.config.ts
 |-- tsconfig.json
+
 ```
