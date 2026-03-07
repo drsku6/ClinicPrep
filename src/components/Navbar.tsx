@@ -1,12 +1,10 @@
-
 'use client'
 
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { auth } from '@/lib/firebase';
 
 const Navbar = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   return (
     <nav className="bg-white p-4 border-b border-gray-200">
@@ -15,9 +13,9 @@ const Navbar = () => {
         <div>
           {user ? (
             <div className="flex items-center">
-              <Link href="/security" className="text-gray-900 mr-4">Security</Link>
+              <Link href="/security" className="text-gray-900 mr-4">Account</Link>
               <button
-                onClick={() => auth.signOut()}
+                onClick={signOut}
                 className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
               >
                 Sign Out
@@ -25,8 +23,7 @@ const Navbar = () => {
             </div>
           ) : (
             <div>
-              <Link href="/signin" className="text-gray-900 mr-4">Sign In</Link>
-              <Link href="/signup" className="text-gray-900">Sign Up</Link>
+              <Link href="/signin" className="text-gray-900">Sign In / Register</Link>
             </div>
           )}
         </div>

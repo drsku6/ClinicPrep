@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithRedirect, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -11,6 +11,7 @@ interface AuthContextType {
   termsAgreed: boolean;
   setTermsAgreed: (agreed: boolean) => void;
   signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   termsAgreed: false,
   setTermsAgreed: () => {},
   signInWithGoogle: () => Promise.resolve(),
+  signOut: () => Promise.resolve(),
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -32,9 +34,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
+      localStorage.setItem('clinicprep_auth_change', Date.now().toString());
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'clinicprep_auth_change') {
+            router.refresh();
+        }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
+}, [router]);
 
   useEffect(() => {
     const agreed = localStorage.getItem('termsAgreed') === 'true';
@@ -48,18 +65,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      await signInWithRedirect(auth, googleProvider);
     } catch (error) {
       console.error("Error signing in with Google: ", error);
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth);
+    } catch (error) {
+      console.error("Error signing out: ", error);
     }
   };
 
   useEffect(() => {
     if (loading) return;
 
-    const publicRoutes = ['/signin', '/signup', '/'];
+    const authRoutes = ['/signin', '/signup'];
 
-    if (!user && !publicRoutes.includes(pathname)) {
+    if (user && authRoutes.includes(pathname)) {
+      router.push('/');
+      return;
+    }
+
+    if (!user && !authRoutes.includes(pathname) && pathname !== '/') {
       router.push('/signin');
       return;
     }
@@ -71,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, termsAgreed, pathname, router, loading]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, termsAgreed, setTermsAgreed, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, loading, termsAgreed, setTermsAgreed, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

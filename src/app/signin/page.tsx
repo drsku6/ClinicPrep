@@ -1,21 +1,26 @@
 'use client'
 
 import { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
-const SignInPage = () => {
+const AuthPage = () => {
+  const [isLoginView, setIsLoginView] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { signInWithGoogle } = useAuth();
   const router = useRouter();
 
-  const handleSignIn = async () => {
+  const handleAuth = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      if (isLoginView) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
       router.push('/');
     } catch (error: any) {
       setError(error.message);
@@ -34,7 +39,18 @@ const SignInPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-900">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md border border-gray-200">
-        <h1 className="text-2xl font-bold mb-6 text-center">Sign In</h1>
+        <div className="flex border-b mb-6">
+          <button
+            onClick={() => setIsLoginView(true)}
+            className={`w-1/2 py-2 text-center text-lg font-medium ${isLoginView ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}>
+            Sign In
+          </button>
+          <button
+            onClick={() => setIsLoginView(false)}
+            className={`w-1/2 py-2 text-center text-lg font-medium ${!isLoginView ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}>
+            Sign Up
+          </button>
+        </div>
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <div>
           <div className="mb-4">
@@ -56,10 +72,10 @@ const SignInPage = () => {
             />
           </div>
           <button
-            onClick={handleSignIn}
+            onClick={handleAuth}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
           >
-            Sign In
+            {isLoginView ? 'Sign In' : 'Create Account'}
           </button>
           <button
             onClick={handleGoogleSignIn}
@@ -73,4 +89,4 @@ const SignInPage = () => {
   );
 };
 
-export default SignInPage;
+export default AuthPage;
