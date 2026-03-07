@@ -27,30 +27,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [termsAgreed, setTermsAgreedState] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
+    // This listener handles auth state changes (e.g., login, logout)
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
       localStorage.setItem('clinicprep_auth_change', Date.now().toString());
     });
+
+    // This specifically checks for a redirect result from Google
+    console.log("Checking for redirect result...");
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          console.log("Caught user from redirect:", result.user.uid);
+          // No need to call setUser here, onAuthStateChanged will handle it
+        }
+      })
+      .catch((error) => {
+        console.error("Error processing redirect result:", error);
+      })
+      .finally(() => {
+        console.log("Finished processing redirect.");
+        setIsProcessingRedirect(false);
+      });
+
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    console.log("Checking Redirect Result...");
-    getRedirectResult(auth).then((result) => {
-      console.log("Result User:", result?.user);
-      if (result?.user) {
-        // User successfully returned from Google
-        setUser(result.user);
-      }
-    }).catch((error) => {
-      console.error("Redirect Error:", error);
-    });
-  }, []);
 
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
@@ -58,9 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             router.refresh();
         }
     };
-
     window.addEventListener('storage', handleStorageChange);
-
     return () => {
         window.removeEventListener('storage', handleStorageChange);
     };
@@ -93,25 +99,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    if (loading) return;
+    // Wait until we are done loading the user and processing any redirects.
+    if (loading || isProcessingRedirect) return;
 
     const authRoutes = ['/signin', '/signup'];
 
     if (user && authRoutes.includes(pathname)) {
-      router.push('/');
+      console.log("User is logged in, redirecting from auth route to /prepare");
+      router.push('/prepare');
       return;
     }
 
+    // If not logged in and not on a public/auth route, redirect to signin
     if (!user && !authRoutes.includes(pathname) && pathname !== '/') {
+        console.log("User is not logged in, redirecting to /signin");
       router.push('/signin');
       return;
     }
 
-    if (user && !termsAgreed && pathname !== '/') {
-      router.push('/');
-      return;
-    }
-  }, [user, termsAgreed, pathname, router, loading]);
+  }, [user, loading, isProcessingRedirect, pathname, router]);
 
   return (
     <AuthContext.Provider value={{ user, loading, termsAgreed, setTermsAgreed, signInWithGoogle, signOut }}>
