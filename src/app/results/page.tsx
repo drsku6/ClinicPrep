@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PatientProfile } from '@/interfaces/patient';
 import { Recommendation } from '@/types/guidelines';
 import { getScreeningRecommendations } from '@/utils/guidelineEngine';
 
-const ResultsPage = () => {
+const ResultsContent = () => {
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const searchParams = useSearchParams();
@@ -56,5 +56,11 @@ const ResultsPage = () => {
     </div>
   );
 };
+
+const ResultsPage = () => (
+  <Suspense fallback={<div>Loading...</div>}>
+    <ResultsContent />
+  </Suspense>
+);
 
 export default ResultsPage;
