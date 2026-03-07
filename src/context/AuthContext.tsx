@@ -40,7 +40,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    console.log("Checking Redirect Result...");
     getRedirectResult(auth).then((result) => {
+      console.log("Result User:", result?.user);
       if (result?.user) {
         // User successfully returned from Google
         setUser(result.user);
