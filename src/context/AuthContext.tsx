@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithRedirect, signOut as firebaseSignOut, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged, User, signInWithRedirect, signOut as firebaseSignOut, getRedirectResult } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -23,29 +23,34 @@ const AuthContext = createContext<AuthContextType>({
   signOut: () => Promise.resolve(),
 });
 
+// Safely get the initial value from localStorage, only on the client.
+const getInitialTermsAgreed = () => {
+    if (typeof window !== 'undefined') {
+        return localStorage.getItem('termsAgreed') === 'true';
+    }
+    return false;
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [termsAgreed, setTermsAgreedState] = useState<boolean>(false);
+  const [termsAgreed, setTermsAgreedState] = useState<boolean>(getInitialTermsAgreed);
   const [loading, setLoading] = useState(true);
   const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // This listener handles auth state changes (e.g., login, logout)
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
       localStorage.setItem('clinicprep_auth_change', Date.now().toString());
     });
 
-    // This specifically checks for a redirect result from Google
     console.log("Checking for redirect result...");
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
           console.log("Caught user from redirect:", result.user.uid);
-          // No need to call setUser here, onAuthStateChanged will handle it
         }
       })
       .catch((error) => {
@@ -72,11 +77,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 }, [router]);
 
-  useEffect(() => {
-    const agreed = localStorage.getItem('termsAgreed') === 'true';
-    setTermsAgreedState(agreed);
-  }, []);
-
   const setTermsAgreed = (agreed: boolean) => {
     localStorage.setItem('termsAgreed', String(agreed));
     setTermsAgreedState(agreed);
@@ -99,7 +99,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Wait until we are done loading the user and processing any redirects.
     if (loading || isProcessingRedirect) return;
 
     const authRoutes = ['/signin', '/signup'];
@@ -110,7 +109,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // If not logged in and not on a public/auth route, redirect to signin
     if (!user && !authRoutes.includes(pathname) && pathname !== '/') {
         console.log("User is not logged in, redirecting to /signin");
       router.push('/signin');

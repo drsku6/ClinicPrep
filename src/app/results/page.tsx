@@ -1,28 +1,33 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PatientProfile } from '@/interfaces/patient';
 import { Recommendation } from '@/types/guidelines';
 import { getScreeningRecommendations } from '@/utils/guidelineEngine';
 
 const ResultsContent = () => {
-  const [profile, setProfile] = useState<PatientProfile | null>(null);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const searchParams = useSearchParams();
+  const profileData = searchParams.get('profile');
 
-  useEffect(() => {
-    const profileData = searchParams.get('profile');
-    if (profileData) {
-      const parsedProfile = JSON.parse(profileData);
-      setProfile(parsedProfile);
-      const generatedRecommendations = getScreeningRecommendations(parsedProfile);
-      setRecommendations(generatedRecommendations);
-    }
-  }, [searchParams]);
+  if (!profileData) {
+    return <div className="p-10 text-center">No patient profile data provided in the URL.</div>;
+  }
+
+  // By deriving state directly from params, we avoid useEffect and extra re-renders.
+  let profile: PatientProfile | null = null;
+  let recommendations: Recommendation[] = [];
+  
+  try {
+    profile = JSON.parse(profileData);
+    recommendations = getScreeningRecommendations(profile!);
+  } catch (error) {
+    console.error("Failed to parse profile data:", error);
+    return <div className="p-10 text-center text-red-600">Error: Could not read the profile data. It may be malformed.</div>;
+  }
 
   if (!profile) {
-    return <div>Loading...</div>;
+    return <div className="p-10 text-center">Loading profile...</div>;
   }
 
   return (
@@ -58,7 +63,7 @@ const ResultsContent = () => {
 };
 
 const ResultsPage = () => (
-  <Suspense fallback={<div>Loading...</div>}>
+  <Suspense fallback={<div>Loading recommendations...</div>}>
     <ResultsContent />
   </Suspense>
 );

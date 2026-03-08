@@ -3,7 +3,6 @@
 
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { PatientProfile } from '@/interfaces/patient';
-import { useState } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
@@ -25,14 +24,23 @@ const SymptomCheckerPage = () => {
     }
 
     try {
+      const profileForDb = {
+        ...data,
+        age: Number(data.age), // Ensure age is a number
+        historyOfSmoking: data.historyOfSmoking,
+        familyHistoryOfColonCancer: data.familyHistoryOfColonCancer,
+      };
+
       // 1. Save profile to Firestore
-      await setDoc(doc(db, 'patientProfiles', user.uid), data);
+      await setDoc(doc(db, 'patientProfiles', user.uid), profileForDb);
       
-      // 2. Persist profile to localStorage for the results page
-      localStorage.setItem('patientProfile', JSON.stringify(data));
+      // 2. Pass profile data via query params for the results page
+      const queryString = new URLSearchParams({ 
+        profile: JSON.stringify(profileForDb)
+      }).toString();
 
       // 3. Redirect to the results page
-      router.push('/results');
+      router.push(`/results?${queryString}`);
 
     } catch (error) {
       console.error('Error in submission process: ', error);
@@ -45,7 +53,6 @@ const SymptomCheckerPage = () => {
       <div className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6 text-center">Symptom Checker</h1>
         <form onSubmit={handleSubmit(onSubmit)}>
-           {/* Form fields remain unchanged */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-gray-400 mb-2">Age</label>

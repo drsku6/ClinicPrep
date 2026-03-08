@@ -2,19 +2,9 @@
 // This is a simplified simulation of a clinical guideline engine.
 // In a real-world scenario, this would be a far more complex system.
 
-interface PatientProfile {
-  age: number;
-  sex: 'male' | 'female';
-  historyOfSmoking: boolean | any; // Allow for testing of non-boolean values
-  familyHistoryOfColonCancer: boolean;
-}
+import { PatientProfile } from "@/interfaces/patient";
+import { Recommendation } from "@/types/guidelines";
 
-interface Recommendation {
-  id: string;
-  title: string;
-  description: string;
-  guideline: string;
-}
 
 export const getScreeningRecommendations = (profile: PatientProfile): Recommendation[] => {
   const recommendations: Recommendation[] = [];
