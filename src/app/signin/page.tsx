@@ -1,92 +1,141 @@
-'use client'
+"use client";
 
-import { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase"; 
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signInWithRedirect, 
+  getRedirectResult,
+  GoogleAuthProvider 
+} from "firebase/auth";
 
-const AuthPage = () => {
+export default function SignInPage() {
   const [isLoginView, setIsLoginView] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const { signInWithGoogle } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleAuth = async () => {
+  // The "Catcher" for Google Redirect
+  useEffect(() => {
+    const checkRedirect = async () => {
+      setLoading(true);
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          router.push("/"); // Route to secure dashboard on success
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to authenticate with Google.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkRedirect();
+  }, [router]);
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
     try {
       if (isLoginView) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
       }
-      router.push('/');
-    } catch (error: any) {
-      setError(error.message);
+      router.push("/"); // Route to secure dashboard on success
+    } catch (err: any) {
+      setError(err.message || "Authentication failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleAuth = async () => {
+    setError(null);
+    setLoading(true);
+    const provider = new GoogleAuthProvider();
     try {
-      await signInWithGoogle();
-      router.push('/');
-    } catch (error: any) {
-      setError(error.message);
+      await signInWithRedirect(auth, provider);
+    } catch (err: any) {
+      setError(err.message || "Failed to initialize Google Sign-In.");
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-900">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md border border-gray-200">
-        <div className="flex border-b mb-6">
-          <button
-            onClick={() => setIsLoginView(true)}
-            className={`w-1/2 py-2 text-center text-lg font-medium ${isLoginView ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-md">
+        
+        {/* Tab Navigation */}
+        <div className="flex mb-6 border-b">
+          <button 
+            className={`flex-1 pb-2 font-medium ${isLoginView ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}
+            onClick={() => { setIsLoginView(true); setError(null); }}
+          >
             Sign In
           </button>
-          <button
-            onClick={() => setIsLoginView(false)}
-            className={`w-1/2 py-2 text-center text-lg font-medium ${!isLoginView ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}>
+          <button 
+            className={`flex-1 pb-2 font-medium ${!isLoginView ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}
+            onClick={() => { setIsLoginView(false); setError(null); }}
+          >
             Sign Up
           </button>
         </div>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
+
+        {error && <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded">{error}</div>}
+
+        {/* Email/Password Form */}
+        <form onSubmit={handleEmailAuth} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <input 
+              type="email" 
+              required 
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-black"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 rounded bg-white text-gray-900 border border-gray-300 focus:outline-none focus:border-blue-500"
             />
           </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 mb-2">Password</label>
-            <input
-              type="password"
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <input 
+              type="password" 
+              required 
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-black"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 rounded bg-white text-gray-900 border border-gray-300 focus:outline-none focus:border-blue-500"
             />
           </div>
-          <button
-            onClick={handleAuth}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mb-4"
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
           >
-            {isLoginView ? 'Sign In' : 'Create Account'}
+            {loading ? "Processing..." : (isLoginView ? "Sign In" : "Create Account")}
           </button>
-          <button
-            onClick={handleGoogleSignIn}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        </form>
+
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300" /></div>
+            <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Or continue with</span></div>
+          </div>
+          <button 
+            onClick={handleGoogleAuth}
+            disabled={loading}
+            className="mt-4 w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            Sign in with Google
+            Google
           </button>
         </div>
+
       </div>
     </div>
   );
-};
-
-export default AuthPage;
+}
